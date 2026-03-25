@@ -1,0 +1,180 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  role          String    @default("AGENT")
+  password      String?
+
+  accounts     Account[]
+  sessions     Session[]
+  leads        Lead[]        @relation("AssignedLeads")
+  appointments Appointment[] @relation("AgentAppointments")
+  notes        Note[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ── Leads ─────────────────────────────────────────────────────────────────────
+
+model Lead {
+  id        String  @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String  @unique
+  phone     String?
+  company   String?
+  source    String  @default("WEBSITE")
+  status    String  @default("NEW")
+  priority  String  @default("MEDIUM")
+  value     Float?
+
+  assignedTo   String?
+  assignedUser User?   @relation("AssignedLeads", fields: [assignedTo], references: [id])
+
+  notes        Note[]
+  appointments Appointment[]
+  activities   Activity[]
+  tags         LeadTag[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  convertedAt DateTime?
+
+  @@index([status])
+  @@index([assignedTo])
+  @@index([createdAt])
+}
+
+// ── Tags ──────────────────────────────────────────────────────────────────────
+
+model Tag {
+  id    String    @id @default(cuid())
+  name  String    @unique
+  color String    @default("#6366f1")
+  leads LeadTag[]
+}
+
+model LeadTag {
+  leadId String
+  tagId  String
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([leadId, tagId])
+}
+
+// ── Notes ─────────────────────────────────────────────────────────────────────
+
+model Note {
+  id      String @id @default(cuid())
+  content String
+  leadId  String
+  userId  String
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([leadId])
+}
+
+// ── Appointments ──────────────────────────────────────────────────────────────
+
+model Appointment {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  status      String   @default("SCHEDULED")
+  location    String?
+  meetingUrl  String?
+
+  leadId  String
+  agentId String
+
+  lead  Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  agent User @relation("AgentAppointments", fields: [agentId], references: [id])
+
+  reminderSentAt DateTime?
+  cancelledAt    DateTime?
+  cancelReason   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([leadId])
+  @@index([agentId])
+  @@index([startTime])
+  @@index([status])
+}
+
+// ── Activity Log ──────────────────────────────────────────────────────────────
+
+model Activity {
+  id          String  @id @default(cuid())
+  type        String
+  description String
+  metadata    String?
+
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([leadId])
+  @@index([createdAt])
+}
