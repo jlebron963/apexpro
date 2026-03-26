@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client"
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
@@ -25,7 +26,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         create: {
           type: "STATUS_CHANGE",
           description: `Status changed from ${existing.status} to ${parsed.data.status}`,
-          metadata: { from: existing.status, to: parsed.data.status },
+         metadata: {
+  from: existing.status,
+  to: parsed.data.status,
+} as Prisma.InputJsonValue,metadata: { from: existing.status, to: parsed.data.status },
         },
       },
     },
