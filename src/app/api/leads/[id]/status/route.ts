@@ -33,14 +33,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         create: {
           type: "STATUS_CHANGE",
           description: `Status changed from ${existing.status} to ${parsed.data.status}`,
-          metadata: JSON.stringify({
-            from: existing.status,
-            to: parsed.data.status,
-          }),
+          metadata: JSON.stringify({ from: existing.status, to: parsed.data.status }),
         },
       },
     },
-  })
-
+  }) 
   return NextResponse.json(lead)
 }
